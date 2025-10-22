@@ -1,0 +1,15 @@
+numpy
+scipy
+matplotlib
+pandas
+seaborn
+statsmodels
+tqdm
+pillow
+colorlog
+numpy-image-widget
+ipywidgets
+ipython
+tifffile
+imageio
+scikit-image
