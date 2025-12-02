@@ -2,7 +2,7 @@
 # @Author: Theo Lemaire
 # @Date:   2024-05-03 12:15:01
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2024-06-12 15:50:46
+# @Last Modified time: 2025-12-01 20:27:11
 
 ''' Plotting utilities '''
 
@@ -18,9 +18,53 @@ from skimage.measure import find_contours
 from itertools import chain
 from matplotlib.collections import PathCollection
 from matplotlib.path import Path
+from datetime import datetime
 
 from logger import logger
 from utils import is_iterable, as_iterable
+
+
+
+def plot_FOV_and_masks(stack, masks, projfunc=None, ax=None, title=None):
+    '''
+    plot field of view projection with overlaid ROI masks 
+
+    :param: stack: fluorescence stack
+    :param masks: masks matrix
+    :param projfunc: projection function (defaults to mean)
+    :param ax: optional matplotlib axis object
+    :return: figure object
+    '''
+    # Compute stack projection along time
+    if projfunc is None:
+        projfunc = np.mean
+    FOV = projfunc(stack, axis=0)
+
+    # Extract ROI contours
+    _, nx, ny = stack.shape
+    df = assemble_masks_dataframe(masks)
+    contours = get_ROI_contours(df, (ny, nx), color='r', lw=1)
+
+    # Create/retrieve figure
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(7, 7))
+        fig.patch.set_facecolor('w')
+    else:
+        fig = ax.get_figure()
+
+    # Plot stack projection FOV and ROI contours
+    ax.imshow(FOV, cmap='viridis')
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.add_collection(contours)
+
+    # Add title
+    if title is None:
+        title = f'{projfunc.__name__} FOV and ROI contours'
+    ax.set_title(title)
+
+    # Return figure
+    return fig
 
 
 def plot_traces(df, iROIs=None, ROIavg=False, istimbounds=None, ax=None, 
@@ -211,6 +255,24 @@ def get_cells_mplobjs(ROI_masks, dims, mode='contour', color='k', alpha=1):
         return rgbmask
 
 
+
+def assemble_masks_dataframe(masks):
+    '''
+    Assemble masks dataframe from masks matrix
+
+    :param masks: 2D masks matrix with ROI numbered pixels
+    :return: ROI and pixel indexed dataframe with "xpix" and "ypix" columns pixel coordinates 
+    '''
+    dfs = {}
+    for i in range(masks.max()):
+        ypix, xpix = np.where(masks == i + 1)
+        df = pd.DataFrame({'xpix': xpix, 'ypix': ypix})
+        df.index.name = 'pixel'
+        dfs[f'ROI{i+1}'] = df
+    return pd.concat(dfs, axis=0, names=['ROI'])
+
+
+
 def get_ROI_contours(*args, color='k', lw=1, **kwargs):
     contours = get_cells_mplobjs(*args, mode='contour', **kwargs)
     return PathCollection(
@@ -225,7 +287,7 @@ def save_figs_book(input_dir, figs, suffix=None):
     fcode = 'figs'
     if suffix is not None:
         fcode = f'{fcode}_{suffix}'
-    fname = f'{fcode}.pdf'
+    fname = f'{fcode}_{datetime.today().strftime("%Y%m%d")}.pdf'
     fpath = os.path.join(input_dir, fname)
     file = pdf_backend.PdfPages(fpath)
     logger.info(f'saving figures in {fpath}:')

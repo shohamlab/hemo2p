@@ -2,11 +2,13 @@
 # @Author: Theo Lemaire
 # @Date:   2021-10-11 11:59:10
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2024-05-01 15:58:33
+# @Last Modified time: 2025-12-01 14:54:53
 
 ''' Collection of image stacking utilities. '''
 
+import os
 import numpy as np
+from tifffile import imread, imwrite
 from scipy.stats import skew
 from scipy.signal import butter, sosfiltfilt
 import matplotlib.pyplot as plt
@@ -907,3 +909,33 @@ class LinRegCorrector(Corrector):
 
         # Return
         return corrected_stack
+
+
+
+def correct_stack(lrc, input_stack, stack_dir):
+    '''
+    Wrapper function around stack corrector class
+    
+    :param lrc: LinRegCorrecttor stack corrector object 
+    :param input_stack: input stack array
+    :param stack_dir: directory containing stacks 
+    :return: corrected stack
+    '''
+    # Construct full path to corrected stack file
+    output_stack_fname = f'stack_{lrc.code}.tif'
+    output_stack_fpath = os.path.join(stack_dir, output_stack_fname)
+
+    # Load stack if it exists
+    if os.path.exists(output_stack_fpath):
+        logger.info(f'loading "{output_stack_fname}" output stack from "{stack_dir}"')
+        output_stack = imread(output_stack_fpath)
+
+    # Otherwise, apply correction and save output to disk
+    else:
+        logger.info(f'correcting input stack with "{lrc.code}" corrector ...')
+        output_stack = lrc.correct(input_stack)
+        logger.info(f'saving corrected stack to {output_stack_fpath}...')
+        imwrite(output_stack_fpath, output_stack)
+
+    # Return corrected stack
+    return output_stack
