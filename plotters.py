@@ -2,7 +2,7 @@
 # @Author: Theo Lemaire
 # @Date:   2024-05-03 12:15:01
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2025-12-01 20:27:11
+# @Last Modified time: 2025-12-02 13:33:42
 
 ''' Plotting utilities '''
 
@@ -25,23 +25,30 @@ from utils import is_iterable, as_iterable
 
 
 
-def plot_FOV_and_masks(stack, masks, projfunc=None, ax=None, title=None):
+def plot_FOV_and_masks(FOV, masks, ax=None, title=None):
     '''
     plot field of view projection with overlaid ROI masks 
 
-    :param: stack: fluorescence stack
-    :param masks: masks matrix
-    :param projfunc: projection function (defaults to mean)
+    :param FOV: field of view projection image. Can be a dictionary of images, 
+        in which case each image is plotted in a separate axis
+    :param masks: masks matrix. Can be a dictionary of masks, in which case each mask is plotted in a separate axis
+    :param title: optional figure title
     :param ax: optional matplotlib axis object
     :return: figure object
     '''
-    # Compute stack projection along time
-    if projfunc is None:
-        projfunc = np.mean
-    FOV = projfunc(stack, axis=0)
+    # If input is a dictionary, call function recursively to plot each FOV/mask pair in a separate axis
+    if isinstance(FOV, dict):
+        naxes = len(FOV)
+        fig, axes = plt.subplots(1, naxes, figsize=(naxes * 3, 3))
+        fig.patch.set_facecolor('w')
+        for ax, run in zip(axes, FOV.keys()):
+            plot_FOV_and_masks(FOV[run], masks[run], ax=ax, title=run)
+        if title is not None:
+            fig.suptitle(title)
+        return fig
 
     # Extract ROI contours
-    _, nx, ny = stack.shape
+    nx, ny = FOV.shape
     df = assemble_masks_dataframe(masks)
     contours = get_ROI_contours(df, (ny, nx), color='r', lw=1)
 
@@ -60,7 +67,7 @@ def plot_FOV_and_masks(stack, masks, projfunc=None, ax=None, title=None):
 
     # Add title
     if title is None:
-        title = f'{projfunc.__name__} FOV and ROI contours'
+        title = 'FOV and ROI contours'
     ax.set_title(title)
 
     # Return figure
@@ -75,7 +82,7 @@ def plot_traces(df, iROIs=None, ROIavg=False, istimbounds=None, ax=None,
     :param df: DataFrame with traces
     :param iROIs (optional): indexes of ROIs to plot
     :param ROIavg (optional): whether to plot ROI average traces (default: False)
-    :param istimbounds (optional): start and end indexes of stimulus interval
+    :param istimbounds (optional): list of start and end indexes of every stimulus interval
     :param ax: axis to plot on (default: None)
     :param ylabel: y-axis label (default: 'intensity')
     :param xbounds: x-axis bounds (default: None)
@@ -192,7 +199,8 @@ def plot_traces(df, iROIs=None, ROIavg=False, istimbounds=None, ax=None,
 
     # Mark stimulus interval, if provided
     if istimbounds is not None:
-        ax.axvspan(*istimbounds, color='silver', alpha=0.5)
+        for istart, iend in istimbounds:
+            ax.axvspan(istart, iend, color='silver', alpha=0.5)
 
     # Set x-axis bounds, if provided
     if xbounds is not None:

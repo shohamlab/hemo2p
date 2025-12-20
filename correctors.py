@@ -2,7 +2,7 @@
 # @Author: Theo Lemaire
 # @Date:   2021-10-11 11:59:10
 # @Last Modified by:   Theo Lemaire
-# @Last Modified time: 2025-12-01 14:54:53
+# @Last Modified time: 2025-12-02 10:24:28
 
 ''' Collection of image stacking utilities. '''
 
@@ -912,15 +912,18 @@ class LinRegCorrector(Corrector):
 
 
 
-def correct_stack(lrc, input_stack, stack_dir):
+def correct_stack(lrc, input_stack_fpath):
     '''
     Wrapper function around stack corrector class
     
     :param lrc: LinRegCorrecttor stack corrector object 
-    :param input_stack: input stack array
-    :param stack_dir: directory containing stacks 
-    :return: corrected stack
+    :param input_stack_fpath: input stack file path
+    :return: corrected stack file path
     '''
+    # Get stack directory and filename
+    stack_dir = os.path.dirname(input_stack_fpath)
+    input_stack_fname = os.path.basename(input_stack_fpath)
+
     # Construct full path to corrected stack file
     output_stack_fname = f'stack_{lrc.code}.tif'
     output_stack_fpath = os.path.join(stack_dir, output_stack_fname)
@@ -930,12 +933,14 @@ def correct_stack(lrc, input_stack, stack_dir):
         logger.info(f'loading "{output_stack_fname}" output stack from "{stack_dir}"')
         output_stack = imread(output_stack_fpath)
 
-    # Otherwise, apply correction and save output to disk
+    # Otherwise, load input stack, apply correction and save output stack to disk
     else:
+        logger.info(f'loading input stack from {input_stack_fpath}...')
+        input_stack = imread(input_stack_fpath)
         logger.info(f'correcting input stack with "{lrc.code}" corrector ...')
         output_stack = lrc.correct(input_stack)
         logger.info(f'saving corrected stack to {output_stack_fpath}...')
         imwrite(output_stack_fpath, output_stack)
 
-    # Return corrected stack
-    return output_stack
+    # Return corrected stack file path
+    return output_stack_fpath
