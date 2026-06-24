@@ -11,4 +11,4 @@ Analysis of hemodynamic effects on 2P imaging
 
 ### Usage
 
-- Run the main analysis notebook (`analysis.ipynb`), modifying the input parameters as needed.
+- Run the main analysis notebook (`DVAA_analysis.ipynb`), modifying the input parameters as needed.
